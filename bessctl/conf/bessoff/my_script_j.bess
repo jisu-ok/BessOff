@@ -1,0 +1,26 @@
+import scapy.all as scapy
+
+pkt_size = int($SN_PKT_SIZE!'60')
+assert(60 <= pkt_size <= 1522)
+
+eth = scapy.Ether(src='02:1e:67:9f:4d:ae', dst='06:16:3e:1b:72:32')
+ip = scapy.IP(src='10.0.0.1', dst='10.0.0.2') #dst IP is overwritten (?)
+tcp = scapy.TCP(sport=10001, dport=10002)
+payload = ('hello' + '0123456789' * 200)[:pkt_size-len(eth/ip/tcp)]
+pkt = eth/ip/tcp/payload
+pkt_data = str(pkt)
+
+#rr::RoundRobin(gates=[0,1]) # create a RoundRobin with two gates
+
+em::ExactMatch(fields=[size=1, mask=0x1, offset=29])
+#em::ExactMatch(fields=[{'offset':29,'num_bytes':1, 'masks':0x1}])
+em.add(fields[0x1], gate=1)
+em.add(fields[0x0], gate=0)
+
+FlowGen(template=pkt_data, pps=1000, flow_rate = 10, flow_duration = 5.0, arrival='uniform', duration='uniform', quick_rampup=True, ip_src_range=100000) -> em
+em:0 -> Sink()
+em:1 -> Sink()
+
+#rr:0 -> Sink()
+#rr:1 -> Sink()
+

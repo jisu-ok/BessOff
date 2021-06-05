@@ -1,0 +1,33 @@
+import scapy.all as scapy
+
+# Craft a packet with the specified IP addresses
+def gen_packet(proto, src_ip, dst_ip):
+    eth = scapy.Ether(src='02:1e:67:9f:4d:ae', dst='06:16:3e:1b:72:32')
+    ip = scapy.IP(src=src_ip, dst=dst_ip, ttl=2)
+    udp = proto(sport=10001, dport=10002)
+    payload = 'helloworld'
+    pkt = eth/ip/udp/payload
+    return bytes(pkt)
+
+packets = [gen_packet(scapy.UDP, '172.16.100.1', '10.0.0.1'),
+           gen_packet(scapy.UDP, '172.12.55.99', '12.34.56.78'),
+           gen_packet(scapy.UDP, '172.12.55.99', '10.0.0.1'),
+           gen_packet(scapy.UDP, '172.16.100.1', '12.34.56.78'),
+           gen_packet(scapy.TCP, '172.12.55.99', '12.34.56.78'),
+           gen_packet(scapy.UDP, '192.168.1.123', '12.34.56.78'),
+          ]
+
+myport1::PMDPort(port_id=0, num_inc_q=1, num_out_q=1)
+input0::QueueInc(port=myport1, qid=0)
+myport2::PMDPort(port_id=1, num_inc_q=1, num_out_q=1)
+output0::QueueOut(port=myport2, qid=0)
+
+fw1::ACL(rules=[{'src_ip': '172.12.0.0/16', 'drop': False}])
+fw2::ACL(rules=[{'dst_ip': '12.34.56.78/24', 'drop': False}])
+fw3::ACL(rules=[{'src_port': 10001, 'drop': False}])
+
+decttl1::DecTTL()
+decttl2::DecTTL()
+
+Source() -> Rewrite(templates=packets) -> decttl1 -> decttl2 -> Sink()
+# input0 -> fw1 -> fw2 -> fw3 -> output0

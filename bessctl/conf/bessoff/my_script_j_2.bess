@@ -1,0 +1,5 @@
+m::Merge()
+Source() -> 0:m
+Source() -> 1:m
+#Merge -> Sink()
+m -> Sink()

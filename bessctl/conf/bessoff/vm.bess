@@ -1,0 +1,34 @@
+import scapy.all as scapy
+
+my_vhost0::PMDPort(vdev='eth_vhost0,iface=/tmp/my_vhost0.sock,queues=1')
+my_vhost1::PMDPort(vdev='eth_vhost1,iface=/tmp/my_vhost1.sock,queues=1')
+
+
+input0::QueueInc(port=my_vhost0, qid=0)
+output0::QueueOut(port=my_vhost0, qid=0)
+
+input1::QueueInc(port=my_vhost1, qid=0)
+output1::QueueOut(port=my_vhost1, qid=0)
+
+def gen_packet(proto, src_ip, dst_ip):
+    eth = scapy.Ether(src='02:1e:67:9f:4d:ae', dst='06:16:3e:1b:72:32')
+    ip = scapy.IP(src=src_ip, dst=dst_ip)
+    udp = proto(sport=10001, dport=10002)
+    payload = 'helloworld'
+    pkt = eth/ip/udp/payload
+    return bytes(pkt)
+
+packets = [gen_packet(scapy.UDP, '172.16.100.1', '10.0.0.1'),
+           gen_packet(scapy.UDP, '172.12.55.99', '12.34.56.78'),
+           gen_packet(scapy.UDP, '172.12.55.99', '10.0.0.1'),
+           gen_packet(scapy.UDP, '172.16.100.1', '12.34.56.78'),
+           gen_packet(scapy.TCP, '172.12.55.99', '12.34.56.78'),
+           gen_packet(scapy.UDP, '192.168.1.123', '12.34.56.78'),
+          ]
+
+Source() -> Rewrite(templates=packets) -> output0
+
+# Source() -> output0
+# Source() -> output1
+input0 -> Sink()
+input1 -> Sink()
