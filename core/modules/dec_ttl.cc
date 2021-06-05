@@ -7,7 +7,7 @@ void DecTTL::ProcessBatch(Context *ctx, bess::PacketBatch *batch) {
     using bess::utils::Ethernet;
     using bess::utils::Ipv4;
 
-    gate_idx_t incoming_gate = ctx->current_igate;
+    // gate_idx_t incoming_gate = ctx->current_igate;
 
     int cnt = batch->cnt();
 
@@ -23,8 +23,8 @@ void DecTTL::ProcessBatch(Context *ctx, bess::PacketBatch *batch) {
             DropPacket(ctx, pkt);
         }
         else {
-            EmitPacket(ctx, pkt, incoming_gate);
-            // EmitPacket(ctx, pkt, 0);
+            // EmitPacket(ctx, pkt, incoming_gate);
+            EmitPacket(ctx, pkt, 0);
         }
     }
 }
