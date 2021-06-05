@@ -1,0 +1,75 @@
+import scapy.all as scapy
+import time
+
+v1 = VPort(ifname='eth_vport1', docker='ctr2', ip_addrs=['10.255.99.2/24'])
+host_if = VPort(ifname='eth_host', ip_addrs=['10.255.99.1/24'])
+
+def gen_packet(proto, src_ip, dst_ip, src_port, dst_port):
+    eth = scapy.Ether(src='02:1e:67:9f:4d:ae', dst='06:16:3e:1b:72:32')
+    ip = scapy.IP(src=src_ip, dst=dst_ip)
+    udp = proto(sport=src_port, dport=dst_port)
+    payload = 'helloworld----------'
+    pkt = eth/ip/udp/payload
+    return bytes(pkt)
+
+packets = [gen_packet(scapy.UDP, '10.255.99.2', '10.255.99.3',7207,7208),
+           gen_packet(scapy.UDP, '10.255.99.1', '10.255.99.3',7207,7208),
+           gen_packet(scapy.UDP, '10.255.99.2', '10.255.12.42',7207,3823),
+           gen_packet(scapy.UDP, '10.255.99.1', '12.34.56.78',7207,3532),
+           gen_packet(scapy.TCP, '172.12.55.99', '12.34.56.78',7207,7208),
+           gen_packet(scapy.UDP, '192.168.1.123', '12.34.56.78',7207,7201),
+          ]
+
+fw::ACL(rules=[{'dst_port': 7208, 'drop': False}])
+
+#FlowGen(template = gen_packet(scapy.UDP,'0.0.0.0','0.0.0.0',0,0), pps=32000, flow_rate = 1, arrival='uniform', duration='uniform', quick_rampup = True) -> Rewrite(templates=packets) -> Timestamp(offset=42) -> L4Checksum() -> fw -> m::Measure(offset=42) -> Sink() 
+
+s::Source() -> Rewrite(templates=packets) -> Timestamp() ->  PortOut(port=v1)
+PortInc(port=v1) -> m::Measure() -> Sink()
+
+bess.add_tc('pktgen', policy='rate_limit',resource='packet', limit={'packet': 32000})
+s.attach_task('pktgen')
+
+start_time = time.time()
+last_time = start_time
+bess.resume_all()
+
+
+
+
+
+
+
+
+
+
+
+
+print('{} RTT (us)                             '.format(' ' * 41), end='')
+print('   jitter (us)')
+print('{}    avg    min    50%    99%      max '.format(' ' * 41), end='')
+print('      avg    min    50%    99%      max')
+
+while True:
+    time.sleep(1)
+
+    # get_summary() doesn't require workers to be stopped
+    ret = m.get_summary(clear=True,  # reset stats every interval
+                        latency_percentiles=[50, 99],
+                        jitter_percentiles=[50, 99])
+
+    diff_ts = ret.timestamp - last_time
+    diff_pkts = ret.packets / diff_ts
+    diff_bits = ret.bits / diff_ts
+    last_time = ret.timestamp
+
+    print('%12.6f: %5.3f Mpps, %8.3f Mbps, ' \
+          '%7.3f %6.1f %6.1f %6.1f %8.1f'   %
+          (ret.timestamp - start_time,
+           diff_pkts / 1e6,
+           diff_bits / 1e6,
+           ret.latency.avg_ns,
+           ret.latency.min_ns,
+           ret.latency.percentile_values_ns[0],
+           ret.latency.percentile_values_ns[1],
+           ret.latency.max_ns))
