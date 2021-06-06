@@ -1,0 +1,20 @@
+import time
+
+
+fw1 = ACL(rules=[{'src_ip': '10.0.0.0/0', 'drop': False}])
+fw2 = ACL(rules=[{'src_ip': '10.0.0.0/0', 'drop': False}])
+pm = PointMachine()
+
+Source() -> pm
+pm:0 -> fw1 -> Sink()
+pm:1 -> fw2 -> Sink()
+
+bess.resume_all()
+
+time.sleep(5)
+ret = pm.set_ogate(ogate=1)
+print("Ogate has set to {}".format(ret.ogate))
+
+time.sleep(5)
+ret = pm.set_ogate(ogate=0)
+print("Ogate has set to {}".format(ret.ogate))

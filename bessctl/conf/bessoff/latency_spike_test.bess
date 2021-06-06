@@ -1,3 +1,5 @@
+import time
+
 ## NF chain of interest
 port0 = PMDPort(port_id=0, num_inc_q=1)
 input0 = QueueInc(port=port0, qid=0)
@@ -21,6 +23,9 @@ input1 -> fw1_1 -> fw1_2 -> fw1_3 -> Sink()
 
 
 bess.resume_all()
+
+start_time = time.time()
+last_time = start_time
 print('{} RTT (us)                             '.format(' ' * 41), end='')
 print('   jitter (us)')
 print('{}    avg    min    50%    99%      max '.format(' ' * 41), end='')
