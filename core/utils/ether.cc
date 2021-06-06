@@ -37,6 +37,8 @@
 #include "format.h"
 #include "random.h"
 
+uint32_t cnt = 0x01;
+
 namespace bess {
 namespace utils {
 
@@ -63,7 +65,8 @@ void Address::Randomize() {
   Random rng;
 
   for (size_t i = 0; i < Address::kSize; i++) {
-    bytes[i] = rng.Get() & 0xff;
+    // bytes[i] = rng.Get() & 0xff;
+    bytes[i] = cnt++ & 0xff;  // temporarily, to avoid VPort's MAC to become different every time  
   }
 
   bytes[0] &= 0xfe;  // not broadcast/multicast
