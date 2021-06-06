@@ -22,7 +22,7 @@ class PointMachine final : public Module {
 
   void ProcessBatch(Context *ctx, bess::PacketBatch *batch) override;
 
-  CommandResponse CommandSetOGgate(
+  CommandResponse CommandSetOGate(
       const bess::pb::PointMachineCommandSetOGateArg &arg
   );
 
