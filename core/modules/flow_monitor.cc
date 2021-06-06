@@ -5,12 +5,17 @@
 #include "utils/tcp.h"
 #include "utils/flow.h"
 
+using bess::utils::Ethernet;
+using bess::utils::Ipv4;
+using bess::utils::Tcp;
+using bess::utils::FiveTupleFlow;
+using bess::utils::FiveTupleFlowHash;
+
+const Commands FlowMonitor::cmds = {
+    {"get_stats", "FlowMonitorCommandGetStatsArg", MODULE_CMD_FUNC(&FlowMonitor::CommandGetStats), Command::THREAD_SAFE},
+};
+
 void FlowMonitor::ProcessBatch(Context *ctx, bess::PacketBatch *batch) {
-    using bess::utils::Ethernet;
-    using bess::utils::Ipv4;
-    using bess::utils::Tcp;
-    using bess::utils::FiveTupleFlow;
-    using bess::utils::FiveTupleFlowHash;
 
 
     uint64_t now_ns = tsc_to_ns(rdtsc());
@@ -80,6 +85,84 @@ void FlowMonitor::ProcessBatch(Context *ctx, bess::PacketBatch *batch) {
     }
     RunNextModule(ctx, batch);
 
+}
+
+// template <typename T1, typename T2>
+// static bess:pb::FlowMonitorCommandGetStatsResponse::FlowStats SetFlowStats(
+//     const T1 &flow, const T2 &stats
+// ) {
+//     bess:pb::FlowMonitorCommandGetStatsResponse::FlowStats flowstats;
+
+//     flowstats.set_src_ip(std::string::ToIpv4Address(flow.src_ip));
+//     flowstats.set_dst_ip(std::string::ToIpv4Address(flow.dst_ip));
+//     flowstats.set_src_port(flow.src_port);
+//     flowstats.set_dst_port(flow.dst_port);
+//     if (flow.protocol == Ipv4::Proto::kTcp) {
+//         flowstats.set_protocol("TCP");
+//     }
+//     else if (flow.protocol == Ipv4::Proto::kUdp) {
+//         flowstats.set_protocol("UDP")
+//     }
+//     flowstats.set_first_pkt_time(stats.FirstPacketTime());
+//     flowstats.set_last_pkt_time(stats.ListPacketTime());
+//     flowstats.set_packets(stats.NumPkts());
+//     flowstats.set_bytes(stats.NumBytes());
+//     flowstats.set_flags(stats.TcpFlags());
+
+//     return flowstats;
+// }
+
+CommandResponse FlowMonitor::CommandGetStats(
+    const bess::pb::FlowMonitorCommandGetStatsArg &arg
+) {
+    bess::pb::FlowMonitorCommandGetStatsResponse r;
+    
+    // std::unordered_map<FiveTupleFlow, FlowStats, FiveTupleFlowHash>::iterator it = flow_map_.begin;
+    for (std::pair<const bess::utils::FiveTupleFlow, FlowStats> it: flow_map_) {
+
+        if (it.first.protocol == Ipv4::Proto::kUdp) {
+            // this flow is UDP
+            if (arg.udp()) {
+                bess::pb::FlowMonitorCommandGetStatsResponse::Stats* stats = r.add_statistics();
+
+                stats->set_src_ip(bess::utils::ToIpv4Address(it.first.src_ip));
+                stats->set_dst_ip(bess::utils::ToIpv4Address(it.first.dst_ip));
+                stats->set_src_port(it.first.src_port.value());
+                stats->set_dst_port(it.first.dst_port.value());
+                stats->set_protocol("UDP");
+                stats->set_packets(it.second.NumPkts());
+                stats->set_bytes(it.second.NumBytes());
+                stats->set_age(it.second.FlowAge());
+                stats->set_flags((uint32_t) it.second.TcpFlags());
+
+                // r.add_statistics(stats);
+            }
+            else {
+                continue;
+            }
+        }
+        else if (it.first.protocol == Ipv4::Proto::kTcp) {
+            // this flow is TCP
+            if (arg.tcp()) {
+                bess::pb::FlowMonitorCommandGetStatsResponse::Stats* stats = r.add_statistics();
+
+                stats->set_src_ip(bess::utils::ToIpv4Address(it.first.src_ip));
+                stats->set_dst_ip(bess::utils::ToIpv4Address(it.first.dst_ip));
+                stats->set_src_port(it.first.src_port.value());
+                stats->set_dst_port(it.first.dst_port.value());
+                stats->set_protocol("TCP");
+                stats->set_packets(it.second.NumPkts());
+                stats->set_bytes(it.second.NumBytes());
+                stats->set_age(it.second.FlowAge());
+                stats->set_flags((uint32_t) it.second.TcpFlags());
+
+                // r.add_statistics(stats);
+            }
+        }
+        
+    }
+
+    return CommandSuccess(r);
 }
 
 ADD_MODULE(FlowMonitor, "flowmonitor", "monitor flow statistics")

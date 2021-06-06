@@ -4,17 +4,8 @@
 #include <rte_hash_crc.h>
 #include "endian.h"
 
-// #include "../module.h"
-// #include "../packet.h"
-
-// using bess::utils::be16_t;
-// using bess::utils::be32_t;
-// using bess::utils::Ipv4;
-
 namespace bess {
 namespace utils {
-
-
 
 class alignas(16) FiveTupleFlow {
     public:

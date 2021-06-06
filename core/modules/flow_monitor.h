@@ -12,7 +12,7 @@ using bess::utils::FiveTupleFlowHash;
 
 class FlowStats {
     public:
-      FlowStats() : first_pkt_ns_(0), last_pkt_ns_(0), pkt_cnt_(0), flags_(0) {}
+      FlowStats() : first_pkt_ns_(0), last_pkt_ns_(0), pkt_cnt_(0), bytes_cnt_(0), flags_(0) {}
 
     //   FiveTupleFlow getFiveTuple() { return flow_; }
       uint64_t FirstPacketTime() { return first_pkt_ns_; }
@@ -24,8 +24,8 @@ class FlowStats {
       void IncNumPkts() { pkt_cnt_++; }
       uint64_t NumBytes() { return bytes_cnt_; }
       void IncNumBytes(uint64_t bytes) { bytes_cnt_ += bytes; }
-    //   uint64_t TcpFlags();
-      void AddFlags(uint16_t flags) { flags_ |= flags; }
+      uint64_t TcpFlags() { return flags_ ;}
+      void AddFlags(uint8_t flags) { flags_ |= flags; }
 
     private:
     //   FiveTupleFlow flow_;
@@ -33,7 +33,7 @@ class FlowStats {
       uint64_t last_pkt_ns_;
       uint64_t pkt_cnt_;
       uint64_t bytes_cnt_;
-      uint16_t flags_;
+      uint8_t flags_;
 };
 
 // Monitor flow statistics
@@ -44,6 +44,12 @@ class FlowMonitor final : public Module {
 //   CommandResponse Init(const bess::pb::DecTTLArg &arg);
 
   void ProcessBatch(Context *ctx, bess::PacketBatch *batch) override;
+
+  CommandResponse CommandGetStats(
+      const bess::pb::FlowMonitorCommandGetStatsArg &arg
+  );
+
+  static const Commands cmds;
 
   private:
     std::unordered_map<FiveTupleFlow, FlowStats, FiveTupleFlowHash> flow_map_;
