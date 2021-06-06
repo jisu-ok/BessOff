@@ -1238,3 +1238,17 @@ message FlowMonitorCommandGetStatsResponse {
 
   repeated Stats statistics = 1;
 }
+
+/**
+ * Set output gate of PointMachine module
+ */
+message PointMachineCommandSetOGateArg {
+  uint32 ogate = 1; // output gate index want to set
+}
+
+/**
+ * Output gate set by PointMachine module in response with set_ogate request
+ */
+message PointMachineCommandSetOGateResponse {
+  uint32 ogate = 1;    // output gate index that has been set in response with set request
+}
