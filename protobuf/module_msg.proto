@@ -1206,3 +1206,35 @@ message MplsPopArg {
 message WorkerSplitArg {
   map<uint32, uint32> worker_gates = 1; // ogate -> worker mask
 }
+
+
+
+
+/**
+ * Request flow statistics to the FlowMonitor module
+ */
+message FlowMonitorCommandGetStatsArg {
+  bool tcp = 1; // if true, tcp flow stats will be retreived
+  bool udp = 2; // if true, udp flow stats will be retreived
+}
+
+
+/**
+ * The FlowMonitor module response with flow statistics
+ */
+message FlowMonitorCommandGetStatsResponse {
+  message Stats {
+    string src_ip = 1;    // Source IP of the flow
+    string dst_ip = 2;    // Destination IP of the flow
+    uint32 src_port = 3;  // TCP/UDP source port of the flow
+    uint32 dst_port = 4;  // TCP/UDP destination port of the flow
+    string protocol = 5;  // Transport protocol; either TCP or UDP for now
+
+    uint64 packets = 6; // The number of packets observed in the flow
+    uint64 bytes = 7; // The number of bytes observed in the flow
+    uint64 age = 8; // Flow's age (last observed time - first observed time) in nanoseconds
+    uint32 flags = 9; // For TCP flows, the union of all TCP flags observed in the flow.
+  }
+
+  repeated Stats statistics = 1;
+}
