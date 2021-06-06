@@ -1,0 +1,89 @@
+## NF chain of interest
+port0 = PMDPort(port_id=0, num_inc_q=1)
+input0 = QueueInc(port=port0, qid=0)
+
+container1_p1 = VPort(ifname='eth_vport1', docker='container1', ip_addrs=['10.0.0.1/24'])
+container1_p2 = VPort(ifname='eth_vport2', docker='container1', ip_addrs=['10.0.0.2/24'])
+
+container2_p1 = VPort(ifname='eth_vport1', docker='container2', ip_addrs=['10.0.0.3/24'])
+container2_p2 = VPort(ifname='eth_vport2', docker='container2', ip_addrs=['10.0.0.4/24'])
+
+container3_p1 = VPort(ifname='eth_vport1', docker='container3', ip_addrs=['10.0.0.5/24'])
+container3_p2 = VPort(ifname='eth_vport2', docker='container3', ip_addrs=['10.0.0.6/24'])
+
+pm1 = PointMachine()
+fw1 = ACL(rules=[{'src_ip': '10.0.0.0/8', 'drop': False}])
+cf1 = Confluence()
+
+pm2 = PointMachine()
+fw2 = ACL(rules=[{'src_ip': '10.0.0.0/8', 'drop': False}])
+cf2 = Confluence()
+
+pm3 = PointMachine()
+fw3 = ACL(rules=[{'src_ip': '10.0.0.0/8', 'drop': False}])
+cf3 = Confluence()
+
+# monitor0 = FlowMonitor()
+# vlan0 = VLANPush(tci=2)
+
+input0 -> Timestamp(offset=42) -> pm1
+pm1:0 -> PortOut(port=container1_p1)
+PortInc(port=container1_p2) -> 0:cf1
+pm1:1 -> fw1 -> 1:cf1
+
+cf1 -> pm2
+pm2:0 -> PortOut(port=container2_p1)
+PortInc(port=container2_p2) -> 0:cf2
+pm2:1 -> fw2 -> 1:cf2
+
+cf2 -> pm3
+pm3:0 -> PortOut(port=container3_p1)
+PortInc(port=container3_p2) -> 0:cf3
+pm3:1 -> fw3 -> 1:cf3
+
+cf3 -> m::Measure(offset=42) -> Sink()
+
+
+## Competing NF Chain
+port1 = PMDPort(port_id=1, num_inc_q=1)
+input1 = PMDPort(port=port1, qid=0)
+
+container4_p1 = VPort(ifname='eth_vport1', docker='container4', ip_addrs=['10.0.0.7/24'])
+container4_p2 = VPort(ifname='eth_vport2', docker='container4', ip_addrs=['10.0.0.8/24'])
+
+container5_p1 = VPort(ifname='eth_vport1', docker='container5', ip_addrs=['10.0.0.9/24'])
+container5_p2 = VPort(ifname='eth_vport2', docker='container5', ip_addrs=['10.0.0.10/24'])
+
+container6_p1 = VPort(ifname='eth_vport1', docker='container6', ip_addrs=['10.0.0.11/24'])
+container6_p2 = VPort(ifname='eth_vport2', docker='container6', ip_addrs=['10.0.0.12/24'])
+
+input1 -> PortOut(port=container4_p1)
+PortInc(port=container4_p2) -> PortOut(port=container5_p1)
+PortInc(port=container5_p2) -> PortOut(port=container6_p1)
+PortInc(port=container6_p2) -> Sink()
+
+# fw1::ACL(rules=[{'src_ip': '10.0.0.0/8', 'drop': False}])
+# monitor1::FlowMonitor()
+# vlan1::VLANPush(tci=2)
+# input1 -> fw0 -> monitor0 -> vlan0 -> Sink()
+
+
+
+# -- For test --
+bess.resume_all()
+time.sleep(10)
+pm.switch_to_on()
+time.sleep(10)
+pm.switch_to_off()
+
+# --------------
+
+
+agent(
+    latency_measure=m,
+    nf_list = [
+        {'pm': pm1, 'cf': cf1},
+        {'pm': pm2, 'cf': cf2},
+        {'pm': pm3, 'cf': cf3}
+    ]
+)
