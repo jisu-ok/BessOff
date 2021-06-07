@@ -1,38 +1,28 @@
 import scapy.all as scapy
 import time
 
-v1 = VPort(ifname='eth_vport1', docker='ctr2', ip_addrs=['10.255.99.2/24'])
-host_if = VPort(ifname='eth_host', ip_addrs=['10.255.99.1/24'])
+#v = VPort(loopback=1, rxq_cpus=[1])
+v1 = VPort(ifname='eth_vport1', docker='ctr1', ip_addrs=['172.17.0.2/8'])
+v21= VPort(ifname='eth_vport1', docker='ctr2', ip_addrs=['172.17.0.3/8'])
+v22= VPort(ifname='eth_vport2', docker='ctr2', ip_addrs=['172.19.0.2/8'])
 
-def gen_packet(proto, src_ip, dst_ip, src_port, dst_port):
-    eth = scapy.Ether(src='02:1e:67:9f:4d:ae', dst='06:16:3e:1b:72:32')
-    ip = scapy.IP(src=src_ip, dst=dst_ip)
-    udp = proto(sport=src_port, dport=dst_port)
-    payload = 'helloworld----------'
-    pkt = eth/ip/udp/payload
-    return bytes(pkt)
-
-packets = [gen_packet(scapy.UDP, '10.255.99.2', '10.255.99.3',7207,7208),
-           gen_packet(scapy.UDP, '10.255.99.1', '10.255.99.3',7207,7208),
-           gen_packet(scapy.UDP, '10.255.99.2', '10.255.12.42',7207,3823),
-           gen_packet(scapy.UDP, '10.255.99.1', '12.34.56.78',7207,3532),
-           gen_packet(scapy.TCP, '172.12.55.99', '12.34.56.78',7207,7208),
-           gen_packet(scapy.UDP, '192.168.1.123', '12.34.56.78',7207,7201),
-          ]
-
-fw::ACL(rules=[{'dst_port': 7208, 'drop': False}])
-
-#FlowGen(template = gen_packet(scapy.UDP,'0.0.0.0','0.0.0.0',0,0), pps=32000, flow_rate = 1, arrival='uniform', duration='uniform', quick_rampup = True) -> Rewrite(templates=packets) -> Timestamp(offset=42) -> L4Checksum() -> fw -> m::Measure(offset=42) -> Sink() 
-
-s::Source() -> Rewrite(templates=packets) -> Timestamp() ->  PortOut(port=v1)
-PortInc(port=v1) -> m::Measure() -> Sink()
-
-bess.add_tc('pktgen', policy='rate_limit',resource='packet', limit={'packet': 32000})
-s.attach_task('pktgen')
 
 start_time = time.time()
 last_time = start_time
-bess.resume_all()
+
+
+PortInc(port=v1)  -> PortOut(port=v21)
+PortInc(port=v22)  -> PortOut(port=v1)
+
+
+#m::Measure()
+#bess.resume_all()
+
+
+
+
+
+
 
 
 
@@ -49,7 +39,7 @@ print('{} RTT (us)                             '.format(' ' * 41), end='')
 print('   jitter (us)')
 print('{}    avg    min    50%    99%      max '.format(' ' * 41), end='')
 print('      avg    min    50%    99%      max')
-
+"""
 while True:
     time.sleep(1)
 
@@ -73,3 +63,4 @@ while True:
            ret.latency.percentile_values_ns[0],
            ret.latency.percentile_values_ns[1],
            ret.latency.max_ns))
+"""

@@ -2,30 +2,16 @@ import scapy.all as scapy
 import time
 
 #v = VPort(loopback=1, rxq_cpus=[1])
-v1 = VPort(ifname='eth_vport1', docker='ctr1', ip_addrs=['172.17.0.2/8'])
-#v21= VPort(ifname='eth_vport1', docker='ctr2', ip_addrs=['172.17.0.3/8'])
-#v22= VPort(ifname='eth_vport2', docker='ctr2', ip_addrs=['172.19.0.2/8'])
+v1 = VPort(ifname='eth_vport1', docker='ctr1', ip_addrs=['10.255.99.2/24'])
+v2 = VPort(ifname='eth_vport2', docker='ctr2', ip_addrs=['10.255.99.3/24'])
 
 
 start_time = time.time()
 last_time = start_time
 
-fw::ACL(rules=[\
-	{'src_port':1, 'dst_port':6500, 'drop':False},
-	{'src_port':0, 'dst_port':6501, 'drop':False},
-	{'src_port':0, 'dst_port':6502, 'drop':False},
-	{'src_port':0, 'dst_port':6503, 'drop':False},
-	{'src_port':7206, 'dst_port':6504, 'drop':False},
-	{'src_port':7207, 'dst_port':6505, 'drop':False}])
-
-PortInc(port=v1) -> fw ->PortOut(port=v1)
-
-#PortInc(port=v1)  -> PortOut(port=v21)
-#PortInc(port=v22)  -> PortOut(port=v1)
-
-
-#m::Measure()
-#bess.resume_all()
+PortInc(port=v1) -> Timestamp(offset=42) -> L4Checksum() -> PortOut(port=v2)
+PortInc(port=v2) -> m::Measure(offset=42) -> PortOut(port=v1)
+bess.resume_all()
 
 
 
@@ -48,7 +34,7 @@ print('{} RTT (us)                             '.format(' ' * 41), end='')
 print('   jitter (us)')
 print('{}    avg    min    50%    99%      max '.format(' ' * 41), end='')
 print('      avg    min    50%    99%      max')
-"""
+
 while True:
     time.sleep(1)
 
@@ -72,4 +58,3 @@ while True:
            ret.latency.percentile_values_ns[0],
            ret.latency.percentile_values_ns[1],
            ret.latency.max_ns))
-"""
