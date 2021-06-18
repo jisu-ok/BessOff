@@ -56,11 +56,11 @@ NUM_QUEUES = int(os.getenv('BESS_QUEUES', '1'))
 QSIZE = int(os.getenv('BESS_QSIZE', '1024'))
 PKT_SIZE = int(os.getenv('BESS_PKT_SIZE', '60'))
 
-VERBOSE = int(os.getenv('VERBOSE', '0'))
+VERBOSE = int(os.getenv('VERBOSE', '1'))
 
 SOCKDIR = '/tmp/bessd'
-IMAGE = 'nefelinetworks/bess_build'
-CONTAINER_NAME = 'nefeli_bessd'
+IMAGE = 'ubuntu:dpdk-numa'
+CONTAINER_NAME = 'dpdk-test'
 
 
 def launch(cid):
@@ -89,18 +89,18 @@ def launch(cid):
            '-- {testpmd_options}'.format(
                name=CONTAINER_NAME + str(cid), huge=HUGEPAGES_PATH,
                sock=SOCKDIR,
-            image=IMAGE, cmd='/usr/local/bin/testpmd',
+            image=IMAGE, cmd='/root/dpdk/build/app/dpdk-testpmd',
             eal_options=eal_opts, testpmd_options=testpmd_opts)
+    print(cmd)
 
     if VERBOSE:
         out = None  # to screen
-        print(cmd)
     else:
         out = subprocess.PIPE
-
     proc = subprocess.Popen(shlex.split(cmd), stdin=subprocess.PIPE,
                             stdout=out, stderr=subprocess.STDOUT,
                             universal_newlines=True)
+    print('set fwd {}'.format(FWD_MODE))
     print('set fwd {}'.format(FWD_MODE), file=proc.stdin)
     print('set txpkts {}'.format(PKT_SIZE), file=proc.stdin)
     print('start tx_first {}'.format(QSIZE), file=proc.stdin, flush=True)

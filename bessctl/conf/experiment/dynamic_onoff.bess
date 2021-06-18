@@ -1,3 +1,5 @@
+import time
+
 acl_rules = [
     {'src_ip': '110.110.110.110', 'drop': False},
     {'dst_ip': '110.110.110.110', 'drop': False},
@@ -18,11 +20,11 @@ input0 = QueueInc(port=port0, qid=0)
 container1_p1 = VPort(ifname='eth_vport1', docker='ctr1', ip_addrs=['172.17.0.2/24'])
 container1_p2 = VPort(ifname='eth_vport2', docker='ctr1', ip_addrs=['172.18.0.2/24'])
 
-container2_p1 = VPort(ifname='eth_vport1', docker='ctr2', ip_addrs=['10.0.0.3/24'])
-container2_p2 = VPort(ifname='eth_vport2', docker='ctr2', ip_addrs=['10.0.0.4/24'])
+container2_p1 = VPort(ifname='eth_vport1', docker='ctr2', ip_addrs=['172.17.0.3/24'])
+container2_p2 = VPort(ifname='eth_vport2', docker='ctr2', ip_addrs=['172.20.0.2/24'])
 
-container3_p1 = VPort(ifname='eth_vport1', docker='ctr3', ip_addrs=['10.0.0.5/24'])
-container3_p2 = VPort(ifname='eth_vport2', docker='ctr3', ip_addrs=['10.0.0.6/24'])
+container3_p1 = VPort(ifname='eth_vport1', docker='ctr3', ip_addrs=['172.17.0.4/24'])
+container3_p2 = VPort(ifname='eth_vport2', docker='ctr3', ip_addrs=['172.21.0.2/24'])
 
 pm1 = PointMachine()
 fw1 = ACL(rules=acl_rules)
@@ -41,17 +43,17 @@ cf3 = Confluence()
 
 input0 -> Timestamp(offset=42) -> pm1
 pm1:0 -> PortOut(port=container1_p1)
-PortInc(port=container1_p2) -> 0:cf1
+p1::PortInc(port=container1_p2) -> 0:cf1
 pm1:1 -> fw1 -> 1:cf1
 
 cf1 -> pm2
 pm2:0 -> PortOut(port=container2_p1)
-PortInc(port=container2_p2) -> 0:cf2
+p2::PortInc(port=container2_p2) -> 0:cf2
 pm2:1 -> fw2 -> 1:cf2
 
 cf2 -> pm3
 pm3:0 -> PortOut(port=container3_p1)
-PortInc(port=container3_p2) -> 0:cf3
+p3::PortInc(port=container3_p2) -> 0:cf3
 pm3:1 -> fw3 -> 1:cf3
 
 cf3 -> m::Measure(offset=42) -> Sink()
@@ -59,7 +61,7 @@ cf3 -> m::Measure(offset=42) -> Sink()
 
 ## Competing NF Chain
 port1 = PMDPort(port_id=1, num_inc_q=1, num_out_q=1)
-input1 = PMDPort(port=port1, qid=0)
+input1 = QueueInc(port=port1, qid=0)
 
 # container4_p1 = VPort(ifname='eth_vport1', docker='container4', ip_addrs=['10.0.0.7/24'])
 # container4_p2 = VPort(ifname='eth_vport2', docker='container4', ip_addrs=['10.0.0.8/24'])
@@ -81,7 +83,13 @@ fw6 = ACL(rules=acl_rules)
 # PortInc(port=container6_p2) -> Sink()
 
 input1 -> fw4 -> fw5 -> fw6 -> Sink()
-
+bess.add_worker(wid=0, core=0)
+bess.add_worker(wid=1, core=1)
+input0.attach_task(wid=0)
+p1.attach_task(wid=0)
+p2.attach_task(wid=0)
+p3.attach_task(wid=0)
+input1.attach_task(wid=1)
 
 # fw1::ACL(rules=[{'src_ip': '10.0.0.0/8', 'drop': False}])
 # monitor1::FlowMonitor()

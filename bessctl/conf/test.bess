@@ -1,0 +1,39 @@
+import scapy.all as scapy
+import socket
+#container_if = VPort(ifname='eth_vport_test', docker='docker-dpdk', ip_addrs=['10.255.99.2/24'])
+container_if = PMDPort( vdev='eth_vhost3,iface=/tmp/sock2')
+host_if = VPort(ifname='eth_host2', ip_addrs=['10.255.99.1/24'])
+#container_if2 = VPort(ifname='eth_vport_test2', ip_addrs=['10.255.99.3/24'])
+
+
+def gen_packet(proto, src_ip, dst_ip):
+	pkt_size = int($SN_PKT_SIZE!'60')
+	assert(60<=pkt_size<=1522)
+
+	eth = scapy.Ether(src='FF:FF:FF:FF:FF:FF', dst='FF:FF:FF:FF:FF:FF')
+	ip = scapy.IP(src='10.255.99.1', dst='10.255.99.2')
+	udp = scapy.UDP(sport=7202, dport=7203)
+	payload = ('Helloaae')[:pkt_size-len(eth/ip/udp)]
+	pkt = eth/ip/udp/payload
+		
+	return str(pkt)
+
+packet = gen_packet(scapy.UDP, '','')
+packets = [gen_packet('','','')]
+
+
+FlowGen(template=packet ,pps=10, flow_rate = 10, quick_rampup = True, arrival='uniform', duration='uniform') -> Rewrite(templates=packets)-> PortOut(port=container_if)
+
+PortInc(port=container_if)->Sink()
+
+
+
+#PortInc(port=container_if2)->PortOut(port=host_if) 
+#-> Sink()
+
+
+#Source() -> Rewrite(templates=packets)-> PortOut(port=container_if)
+
+#PortInc(port=host_if) -> PortOut(port=container_if)
+#PortInc(port=container_if) -> PortOut(port=host_if) 
+

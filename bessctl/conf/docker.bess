@@ -1,7 +1,17 @@
 import scapy.all as scapy
 import socket
-container_if = VPort(ifname='eth_vport_test', docker='ctr2', ip_addrs=['10.255.99.2/24'])
-host_if = VPort(ifname='eth_host1', ip_addrs=['10.255.99.1/24'])
+container_if1 = PMDPort( vdev='eth_vhost_v0_0,iface=/tmp/bessd/vhost_user0_0.sock,queues=1',num_inc_q=1,num_out_q=1,size_inc_q=1024,size_out_q=1024)
+output1 = QueueOut(port=container_if1, qid=0)
+container_if2 = PMDPort( vdev='eth_vhost_v0_1,iface=/tmp/bessd/vhost_user0_1.sock,queues=1',num_inc_q=1,num_out_q=1,size_inc_q=1024,size_out_q=1024)
+input1 = QueueInc(port=container_if2, qid=0)
+
+port0 = PMDPort(port_id=0, num_inc_q=1, num_out_q=1)
+from_sanc = QueueInc(port=port0, qid=0)
+
+port1 = PMDPort(port_id=1, num_inc_q=1, num_out_q=1)
+to_sanc = QueueOut(port=port1, qid=0)
+
+#host_if = VPort(ifname='eth_host2', ip_addrs=['10.255.99.1/24'])
 #container_if2 = VPort(ifname='eth_vport_test2', ip_addrs=['10.255.99.3/24'])
 
 
@@ -10,11 +20,10 @@ def gen_packet(proto, src_ip, dst_ip):
 	assert(60<=pkt_size<=1522)
 
 	eth = scapy.Ether(src='FF:FF:FF:FF:FF:FF', dst='FF:FF:FF:FF:FF:FF')
-	ip = scapy.IP(src='10.255.99.1', dst='10.255.99.2')
-	udp = scapy.UDP(sport=7202, dport=7203)
+	ip = scapy.IP(src='0.0.0.0', dst='0.0.0.0')
+	udp = scapy.UDP(sport=0, dport=0)
 	payload = ('Helloaae')[:pkt_size-len(eth/ip/udp)]
 	pkt = eth/ip/udp/payload
-	pkt.show2()
 		
 	return str(pkt)
 
@@ -22,18 +31,19 @@ packet = gen_packet(scapy.UDP, '','')
 packets = [gen_packet('','','')]
 
 
-#FlowGen(template=packet ,pps=10, flow_rate = 10, quick_rampup = True, arrival='uniform', duration='uniform') -> Rewrite(templates=packets)-> PortOut(port=container_if)
+#FlowGen(template=packet ,pps=775000, flow_rate = 100, quick_rampup = True, arrival='uniform', duration='uniform') -> Rewrite(templates=packets)->output1
 
-#PortInc(port=container_if)->Sink()
+#input1->Sink()
 
 
-
+from_sanc -> output1
+input1->to_sanc
 #PortInc(port=container_if2)->PortOut(port=host_if) 
 #-> Sink()
 
 
 #Source() -> Rewrite(templates=packets)-> PortOut(port=container_if)
 
-PortInc(port=host_if) -> PortOut(port=container_if)
-PortInc(port=container_if) -> PortOut(port=host_if) 
+#PortInc(port=host_if) -> PortOut(port=container_if)
+#PortInc(port=container_if) -> PortOut(port=host_if) 
 

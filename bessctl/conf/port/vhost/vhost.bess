@@ -66,6 +66,7 @@ for i in range(NUM_VMS):
         v = 'v{}_{}'.format(i, j)
         vdev_str = 'eth_vhost_{},iface=/tmp/bessd/vhost_user{}_{}.sock,queues={}' \
                 .format(v, i, j, NUM_QUEUES)
+        print(vdev_str)
         p = PMDPort(name=v, vdev=vdev_str, num_inc_q=NUM_QUEUES, \
                     num_out_q=NUM_QUEUES, size_inc_q=QSIZE, size_out_q=QSIZE)
         for k in range(NUM_QUEUES):
@@ -73,5 +74,6 @@ for i in range(NUM_VMS):
             qinc = QueueInc(port=p, qid=k)
             qinc -> QueueOut(port=p, qid=k)
             qinc.attach_task(parent='nf_to_host')
+
 
 print('Now you can run either launch_vm.py or launch_container.py')
