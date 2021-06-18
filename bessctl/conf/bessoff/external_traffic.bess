@@ -1,3 +1,4 @@
+
 port0 = PMDPort(port_id=0, num_inc_q=1, num_out_q=1)
 input0 = QueueInc(port=port0, qid=0)
 
@@ -9,6 +10,11 @@ input2 = QueueInc(port=port2, qid=0)
 
 port3 = PMDPort(port_id=3, num_inc_q=1, num_out_q=1)
 output3 = QueueOut(port=port3, qid=0)
+
+bess.add_worker(wid=0, core=11)
+bess.add_worker(wid=1, core=23)
+input0.attach_task(wid=0)
+input2.attach_task(wid=1)
 
 input0 -> output1
 input2 -> output3
