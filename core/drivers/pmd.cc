@@ -251,9 +251,6 @@ CommandResponse PMDPort::Init(const bess::pb::PMDPortArg &arg) {
     return CommandFailure(-ret, "rte_eth_dev_configure() failed");
   }
 
-  rte_eth_promiscuous_enable(ret_port_id);
-
-
   int sid = rte_eth_dev_socket_id(ret_port_id);
   if (sid < 0 || sid > RTE_MAX_NUMA_NODES) {
     sid = 0;  // if socket_id is invalid, set to 0
@@ -311,7 +308,7 @@ CommandResponse PMDPort::Init(const bess::pb::PMDPortArg &arg) {
     }
   }
 
-  // rte_eth_promiscuous_enable(ret_port_id);
+  rte_eth_promiscuous_enable(ret_port_id);
 
   int offload_mask = 0;
   offload_mask |= arg.vlan_offload_rx_strip() ? ETH_VLAN_STRIP_OFFLOAD : 0;
