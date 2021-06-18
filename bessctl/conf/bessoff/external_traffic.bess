@@ -16,8 +16,20 @@ bess.add_worker(wid=1, core=23)
 input0.attach_task(wid=0)
 input2.attach_task(wid=1)
 
-input0 -> output1
-input2 -> output3
+cycle_conf1 = {
+    'cycles_per_batch': 1000,
+    'cycles_per_packet': 1000,
+    'cycles_per_byte': 1000
+}
+cycle_conf2 = {
+    'cycles_per_batch': 1000,
+    'cycles_per_packet': 1000,
+    'cycles_per_byte': 0
+}
+
+
+input0 -> Bypass(**cycle_conf1) -> output1
+input2 -> Bypass(**cycle_conf2) -> output3
 
 
 
