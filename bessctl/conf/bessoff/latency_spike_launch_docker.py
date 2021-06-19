@@ -6,9 +6,9 @@ import time
 
 NUM_VMS = 3
 NUM_VMS_CMPT = 3
+VERBOSE = 1
 
-
-CONTAINER_NAME='dpdk-test0'
+CONTAINER_NAME='dpdk-test'
 IMAGE='ubuntu:dpdk-numa'
 
 def launch(cid):
@@ -19,14 +19,18 @@ def launch(cid):
             "--vdev=virtio_user0,path=/tmp/bessd/vhost_user{}_0.sock,queues=1 " \
             "--vdev=virtio_user1,path=/tmp/bessd/vhost_user{}_1.sock,queues=1 " \
             "-- -i --txd=1024 --rxd=1024 --txq=1 --rxq=1  --total-num-mbufs=65536".format(
-                CONTAINER_NAME + str(cid),
+                "{}{:02d}".format(CONTAINER_NAME, str(cid)),
                 IMAGE,
                 2 + cid,
                 cid,
                 cid
             )
 
-    out = subprocess.PIPE
+    if VERBOSE:
+        out = None  # to screen
+    else:
+        out = subprocess.PIPE
+
     proc = subprocess.Popen(shlex.split(cmd), stdin=subprocess.PIPE,
                             stdout=out, stderr=subprocess.STDOUT,
                             universal_newlines=True)
@@ -38,10 +42,10 @@ def launch(cid):
 def kill(cid):
     print('Terminating container {} '.format(cid))
 
-    cmd = 'docker kill {name}'.format(name=CONTAINER_NAME + str(cid))
+    cmd = 'docker kill {name}'.format(name="{}{:02d}".format(CONTAINER_NAME, str(cid)))
 
-    # if VERBOSE:
-    #     print(cmd)
+    if VERBOSE:
+        print(cmd)
 
     try:
         proc = subprocess.check_call(shlex.split(cmd), stdout=subprocess.PIPE)
