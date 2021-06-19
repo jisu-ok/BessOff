@@ -19,7 +19,7 @@ def launch(cid):
             "--vdev=virtio_user0,path=/tmp/bessd/vhost_user{}_0.sock,queues=1 " \
             "--vdev=virtio_user1,path=/tmp/bessd/vhost_user{}_1.sock,queues=1 " \
             "-- -i --txd=1024 --rxd=1024 --txq=1 --rxq=1  --total-num-mbufs=65536".format(
-                CONTAINER_NAME,
+                CONTAINER_NAME + str(cid),
                 IMAGE,
                 2 + cid,
                 cid,
