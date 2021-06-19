@@ -19,7 +19,7 @@ NUM_VMS = 3
 for i in range(NUM_VMS):
     PMDPort(
         name='port_VM{}_0'.format(i),
-        vdev='eth_vhost_v{}_0,iface=/tmp/bessd/vhost_user{}_0.sock,queues=1'.format(i),
+        vdev='eth_vhost_v{}_0,iface=/tmp/bessd/vhost_user{}_0.sock,queues=1'.format(i, i),
         # num_inc_q=1,
         num_out_q=1,
         size_inq_q=1024,
@@ -29,7 +29,7 @@ for i in range(NUM_VMS):
     
     PMDPort(
         name='port_VM{}_1'.format(i),
-        vdev='eth_vhost_v{}_1,iface=/tmp/bessd/vhost_user{}_1.sock,queues=1'.format(i),
+        vdev='eth_vhost_v{}_1,iface=/tmp/bessd/vhost_user{}_1.sock,queues=1'.format(i, i),
         num_inc_q=1,
         # num_out_q=1,
         size_inq_q=1024,
@@ -55,7 +55,7 @@ NUM_VMS_CMPT = 3
 for i in range(NUM_VMS, NUM_VMS + NUM_VMS_CMPT):
     PMDPort(
         name='port_VM{}_0'.format(i),
-        vdev='eth_vhost_v{}_0,iface=/tmp/bessd/vhost_user{}_0.sock,queues=1'.format(i),
+        vdev='eth_vhost_v{}_0,iface=/tmp/bessd/vhost_user{}_0.sock,queues=1'.format(i, i),
         # num_inc_q=1,
         num_out_q=1,
         size_inq_q=1024,
@@ -65,7 +65,7 @@ for i in range(NUM_VMS, NUM_VMS + NUM_VMS_CMPT):
     
     PMDPort(
         name='port_VM{}_1'.format(i),
-        vdev='eth_vhost_v{}_1,iface=/tmp/bessd/vhost_user{}_1.sock,queues=1'.format(i),
+        vdev='eth_vhost_v{}_1,iface=/tmp/bessd/vhost_user{}_1.sock,queues=1'.format(i, i),
         num_inc_q=1,
         # num_out_q=1,
         size_inq_q=1024,
