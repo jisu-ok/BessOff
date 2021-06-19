@@ -1,4 +1,6 @@
+from pybess import flow_stat_printer
 import scapy.all as scapy
+import time
 
 # Craft a packet with the specified IP addresses
 def gen_packet(proto, src_ip, dst_ip):
@@ -17,17 +19,34 @@ packets = [gen_packet(scapy.UDP, '172.16.100.1', '10.0.0.1'),
            gen_packet(scapy.UDP, '192.168.1.123', '12.34.56.78'),
           ]
 
-myport1::PMDPort(port_id=0, num_inc_q=1, num_out_q=1)
-input0::QueueInc(port=myport1, qid=0)
-myport2::PMDPort(port_id=1, num_inc_q=1, num_out_q=1)
-output0::QueueOut(port=myport2, qid=0)
+# myport1::PMDPort(port_id=0, num_inc_q=1, num_out_q=1)
+# input0::QueueInc(port=myport1, qid=0)
+# myport2::PMDPort(port_id=1, num_inc_q=1, num_out_q=1)
+# output0::QueueOut(port=myport2, qid=0)
 
-fw1::ACL(rules=[{'src_ip': '172.12.0.0/16', 'drop': False}])
-fw2::ACL(rules=[{'dst_ip': '12.34.56.78/24', 'drop': False}])
-fw3::ACL(rules=[{'src_port': 10001, 'drop': False}])
+# fw1::ACL(rules=[{'src_ip': '172.12.0.0/16', 'drop': False}])
+# fw2::ACL(rules=[{'dst_ip': '12.34.56.78/24', 'drop': False}])
+# fw3::ACL(rules=[{'src_port': 10001, 'drop': False}])
 
+monitor::FlowMonitor()
 decttl1::DecTTL()
 decttl2::DecTTL()
 
-Source() -> Rewrite(templates=packets) -> decttl1 -> decttl2 -> Sink()
+s1::Source()
+s2::Source()
+
+# bess.add_worker(wid=0, core=2)
+bess.add_worker(wid=1, core=3)
+bess.add_worker(wid=2, core=7)
+s1.attach_task(wid=1)
+s2.attach_task(wid=2)
+# decttl1.attach_task(wid=2)
+
+s1 -> Rewrite(templates=packets) -> monitor -> decttl1 -> Sink()
 # input0 -> fw1 -> fw2 -> fw3 -> output0
+s2 -> Rewrite(templates=packets) -> decttl2 -> Sink()
+
+
+bess.resume_all()
+
+flow_stat_printer.print_flow_stats(monitor)
