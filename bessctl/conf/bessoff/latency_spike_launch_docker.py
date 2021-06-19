@@ -1,5 +1,8 @@
+from __future__ import print_function
+
 import subprocess
 import shlex
+import time
 
 NUM_VMS = 3
 NUM_VMS_CMPT = 3
@@ -12,7 +15,7 @@ def launch(cid):
     cmd = "numactl -m 0 " \
             "docker run --privileged -it --rm --name {} -v /dev/hugepages:/dev/hugepages " \
             "-v /tmp/bessd:/tmp/bessd {} " \
-            "/root/dpdk/build/app/dpdk-testpmd --in-memory --no-pci -m 1024 -l {} " \
+            "/root/dpdk/build/app/dpdk-testpmd --in-memory --no-pci -m 1024 -l 0,{} " \
             "--vdev=virtio_user0,path=/tmp/bessd/vhost_user{}_0.sock,queues=1 " \
             "--vdev=virtio_user1,path=/tmp/bessd/vhost_user{}_1.sock,queues=1 " \
             "-- -i --txd=1024 --rxd=1024 --txq=1 --rxq=1  --total-num-mbufs=65536".format(
@@ -30,15 +33,15 @@ def launch(cid):
     # print('set fwd {}'.format(FWD_MODE), file=proc.stdin)
     # print('set txpkts {}'.format(PKT_SIZE), file=proc.stdin)
     print('start', file=proc.stdin, flush=True)
-    print proc
+    return proc
 
 def kill(cid):
     print('Terminating container {} '.format(cid))
 
     cmd = 'docker kill {name}'.format(name=CONTAINER_NAME + str(cid))
 
-    if VERBOSE:
-        print(cmd)
+    # if VERBOSE:
+    #     print(cmd)
 
     try:
         proc = subprocess.check_call(shlex.split(cmd), stdout=subprocess.PIPE)
