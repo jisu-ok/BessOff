@@ -1,6 +1,6 @@
 import time
-import subprocess
-import shlex
+# import subprocess
+# import shlex
 
 
 bess.add_worker(wid=0, core=10)
@@ -84,30 +84,30 @@ prev -> output_sink_cmpt
 
 
 
-CONTAINER_NAME='dpdk-test0'
-IMAGE='ubuntu:dpdk-numa'
-for i in range(NUM_VMS + NUM_VMS_CMPT):
-    cmd = "numactl -m 0 " \
-            "docker run --privileged -it --rm --name {} -v /dev/hugepages:/dev/hugepages " \
-            "-v /tmp/bessd:/tmp/bessd {} " \
-            "/root/dpdk/build/app/dpdk-testpmd --in-memory --no-pci -m 1024 -l {} " \
-            "--vdev=virtio_user0,path=/tmp/bessd/vhost_user{}_0.sock,queues=1 " \
-            "--vdev=virtio_user1,path=/tmp/bessd/vhost_user{}_1.sock,queues=1 " \
-            "-- -i --txd=1024 --rxd=1024 --txq=1 --rxq=1  --total-num-mbufs=65536".format(
-                CONTAINER_NAME,
-                IMAGE,
-                2 + i,
-                i,
-                i
-            )
+# CONTAINER_NAME='dpdk-test0'
+# IMAGE='ubuntu:dpdk-numa'
+# for i in range(NUM_VMS + NUM_VMS_CMPT):
+#     cmd = "numactl -m 0 " \
+#             "docker run --privileged -it --rm --name {} -v /dev/hugepages:/dev/hugepages " \
+#             "-v /tmp/bessd:/tmp/bessd {} " \
+#             "/root/dpdk/build/app/dpdk-testpmd --in-memory --no-pci -m 1024 -l {} " \
+#             "--vdev=virtio_user0,path=/tmp/bessd/vhost_user{}_0.sock,queues=1 " \
+#             "--vdev=virtio_user1,path=/tmp/bessd/vhost_user{}_1.sock,queues=1 " \
+#             "-- -i --txd=1024 --rxd=1024 --txq=1 --rxq=1  --total-num-mbufs=65536".format(
+#                 CONTAINER_NAME,
+#                 IMAGE,
+#                 2 + i,
+#                 i,
+#                 i
+#             )
 
-    out = subprocess.PIPE
-    proc = subprocess.Popen(shlex.split(cmd), stdin=subprocess.PIPE,
-                            stdout=out, stderr=subprocess.STDOUT,
-                            universal_newlines=True)
-    # print('set fwd {}'.format(FWD_MODE), file=proc.stdin)
-    # print('set txpkts {}'.format(PKT_SIZE), file=proc.stdin)
-    print('start', file=proc.stdin, flush=True)
+#     out = subprocess.PIPE
+#     proc = subprocess.Popen(shlex.split(cmd), stdin=subprocess.PIPE,
+#                             stdout=out, stderr=subprocess.STDOUT,
+#                             universal_newlines=True)
+#     # print('set fwd {}'.format(FWD_MODE), file=proc.stdin)
+#     # print('set txpkts {}'.format(PKT_SIZE), file=proc.stdin)
+#     print('start', file=proc.stdin, flush=True)
 
 
 # fw0_1 = ACL(rules=[{'src_ip': '192.168.0.0/16', 'drop': False}])
