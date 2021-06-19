@@ -3,8 +3,8 @@ import time
 # import shlex
 
 
-bess.add_worker(wid=0, core=10)
-bess.add_worker(wid=1, core=11)
+bess.add_worker(wid=0, core=11)
+bess.add_worker(wid=1, core=35)
 
 
 ## NF chain of interest

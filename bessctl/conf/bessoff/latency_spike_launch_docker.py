@@ -6,14 +6,14 @@ import time
 
 NUM_VMS = 3
 NUM_VMS_CMPT = 3
-VERBOSE = 1
+VERBOSE = 0
 
 CONTAINER_NAME='dpdk-test'
 IMAGE='ubuntu:dpdk-numa'
 
-def launch(cid):
+def launch(cid, corenum):
     cmd = "numactl -m 0 " \
-            "docker run --privileged -d --rm --name {} -v /dev/hugepages:/dev/hugepages " \
+            "docker run --privileged -i --rm --name {} -v /dev/hugepages:/dev/hugepages " \
             "-v /tmp/bessd:/tmp/bessd {} " \
             "/root/dpdk/build/app/dpdk-testpmd --in-memory --no-pci -m 1024 -l 0,{} " \
             "--vdev=virtio_user0,path=/tmp/bessd/vhost_user{}_0.sock,queues=1 " \
@@ -21,7 +21,7 @@ def launch(cid):
             "-- -i --txd=1024 --rxd=1024 --txq=1 --rxq=1  --total-num-mbufs=65536".format(
                 "{}{:02d}".format(CONTAINER_NAME, cid),
                 IMAGE,
-                2 + cid,
+                corenum,
                 cid,
                 cid
             )
@@ -58,7 +58,8 @@ if __name__ == '__main__':
     num_containers = NUM_VMS + NUM_VMS_CMPT
 
     try:
-        procs = [launch(i) for i in range(num_containers)]
+        procs = [launch(i, 2+i) for i in range(NUM_VMS)]
+        procs = [launch(NUM_VMS+i, 26+i) for i in range(NUM_VMS_CMPT)]
 
         print('Press Ctrl+C to terminate all containers')
         while True:
