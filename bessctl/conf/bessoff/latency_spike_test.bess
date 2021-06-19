@@ -1,4 +1,3 @@
-from bessctl.conf.port.vhost.launch_container import CONTAINER_NAME
 import time
 import subprocess
 import shlex
@@ -6,8 +5,10 @@ import shlex
 ## NF chain of interest
 port_source = PMDPort(port_id=0, num_inc_q=1)
 input_source = QueueInc(port=port_source, qid=0)
+t =Timestamp(offset=42)
+input_source -> t
+prev = t
 
-prev = input_source
 NUM_VMS = 3
 for i in range(NUM_VMS):
     PMDPort(
@@ -30,10 +31,11 @@ for i in range(NUM_VMS):
     )
     prev = QueueInc(name='input_VM{}'.format(i), port='port_VM{}_1'.format(i), qid=0)
 
+m = Measure(offset=42)
 port_sink = PMDPort(port_id=1, num_out_q=1)
 output_sink = QueueOut(port=port_sink, qid=0)
 
-prev -> output_sink
+prev -> m -> output_sink
 
 
 ## Competing NF chain
