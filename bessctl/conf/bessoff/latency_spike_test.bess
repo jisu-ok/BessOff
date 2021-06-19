@@ -2,9 +2,15 @@ import time
 import subprocess
 import shlex
 
+
+bess.add_worker(wid=0, core=10)
+bess.add_worker(wid=1, core=11)
+
+
 ## NF chain of interest
 port_source = PMDPort(port_id=0, num_inc_q=1)
 input_source = QueueInc(port=port_source, qid=0)
+input_source.attach_task(wid=0)
 t =Timestamp(offset=42)
 input_source -> t
 prev = t
@@ -30,6 +36,7 @@ for i in range(NUM_VMS):
         size_out_q=1024
     )
     prev = QueueInc(name='input_VM{}'.format(i), port='port_VM{}_1'.format(i), qid=0)
+    bess.attach_task('input_VM{}'.format(i), wid=0)
 
 m = Measure(offset=42)
 port_sink = PMDPort(port_id=1, num_out_q=1)
@@ -41,6 +48,7 @@ prev -> m -> output_sink
 ## Competing NF chain
 port_source_cmpt = PMDPort(port_id=2, num_inc_q=1)
 input_source_cmpt = QueueInc(port=port_source_cmpt, qid=0)
+input_source_cmpt.attach_task(wid=1)
 
 prev = input_source_cmpt
 NUM_VMS_CMPT = 3
@@ -64,11 +72,17 @@ for i in range(NUM_VMS, NUM_VMS + NUM_VMS_CMPT):
         size_out_q=1024
     )
     prev = QueueInc(name='input_VM{}'.format(i), port='port_VM{}_1'.format(i), qid=0)
+    bess.attach_task('input_VM{}'.format(i), wid=1)
 
 port_sink_cmpt = PMDPort(port_id=3, num_out_q=1)
 output_sink_cmpt = QueueOut(port=port_sink_cmpt, qid=0)
 
 prev -> output_sink_cmpt
+
+
+
+
+
 
 CONTAINER_NAME='dpdk-test0'
 IMAGE='ubuntu:dpdk-numa'
