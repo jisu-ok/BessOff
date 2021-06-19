@@ -22,7 +22,7 @@ for i in range(NUM_VMS):
         vdev='eth_vhost_v{}_0,iface=/tmp/bessd/vhost_user{}_0.sock,queues=1'.format(i, i),
         # num_inc_q=1,
         num_out_q=1,
-        size_inq_q=1024,
+        # size_inc_q=1024,
         size_out_q=1024
     )
     prev -> QueueOut(name='output_VM{}'.format(i), port='port_VM{}_0'.format(i), qid=0)
@@ -32,8 +32,8 @@ for i in range(NUM_VMS):
         vdev='eth_vhost_v{}_1,iface=/tmp/bessd/vhost_user{}_1.sock,queues=1'.format(i, i),
         num_inc_q=1,
         # num_out_q=1,
-        size_inq_q=1024,
-        size_out_q=1024
+        size_inc_q=1024,
+        # size_out_q=1024
     )
     prev = QueueInc(name='input_VM{}'.format(i), port='port_VM{}_1'.format(i), qid=0)
     bess.attach_task('input_VM{}'.format(i), wid=0)
@@ -58,7 +58,7 @@ for i in range(NUM_VMS, NUM_VMS + NUM_VMS_CMPT):
         vdev='eth_vhost_v{}_0,iface=/tmp/bessd/vhost_user{}_0.sock,queues=1'.format(i, i),
         # num_inc_q=1,
         num_out_q=1,
-        size_inq_q=1024,
+        # size_inc_q=1024,
         size_out_q=1024
     )
     prev -> QueueOut(name='output_VM{}'.format(i), port='port_VM{}_0'.format(i), qid=0)
@@ -68,8 +68,8 @@ for i in range(NUM_VMS, NUM_VMS + NUM_VMS_CMPT):
         vdev='eth_vhost_v{}_1,iface=/tmp/bessd/vhost_user{}_1.sock,queues=1'.format(i, i),
         num_inc_q=1,
         # num_out_q=1,
-        size_inq_q=1024,
-        size_out_q=1024
+        size_inc_q=1024,
+        # size_out_q=1024
     )
     prev = QueueInc(name='input_VM{}'.format(i), port='port_VM{}_1'.format(i), qid=0)
     bess.attach_task('input_VM{}'.format(i), wid=1)
