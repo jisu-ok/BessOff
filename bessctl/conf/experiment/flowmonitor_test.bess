@@ -12,23 +12,33 @@ payload = ('hello' + '0123456789' * 200)[:pkt_size-len(eth/ip/tcp)]
 pkt = eth/ip/tcp/payload
 pkt_data = str(pkt)
 
-fg = FlowGen(
-    template=pkt_data,
-    pps=100000,
-    flow_rate = 5,
-    flow_duration = 4.0,
-    arrival='uniform',
-    duration='pareto',
-    quick_rampup=True,
-    ip_src_range=100000,
-    ip_dst_range=10000,
-    port_src_range=1000,
-    port_dst_range=1000
-)
+# fg = FlowGen(
+#     template=pkt_data,
+#     pps=100000,
+#     flow_rate = 5,
+#     flow_duration = 4.0,
+#     arrival='uniform',
+#     duration='pareto',
+#     quick_rampup=True,
+#     ip_src_range=100000,
+#     ip_dst_range=10000,
+#     port_src_range=1000,
+#     port_dst_range=1000
+# )
 
-m = FlowMonitor()
+monitor = FlowMonitor()
+dec = DecTTL()
 
-fg -> m -> Sink()
+# fg -> monitor -> dec -> Sink()
+
+
+QSIZE = 2048
+port_source = PMDPort(port_id=0, num_inc_q=1, size_inc_q=QSIZE)
+input_source = QueueInc(port=port_source, qid=0)
+port_sink = PMDPort(port_id=1, num_out_q=1, size_out_q=QSIZE)
+output_sink = QueueOut(port=port_sink, qid=0)
+input_source -> monitor -> dec -> output_sink
+
 
 bess.resume_all()
 flow_stat_printer.print_flow_stats(m)
