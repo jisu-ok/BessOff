@@ -1,0 +1,59 @@
+import scapy.all as scapy
+import socket
+import time
+
+bess.add_worker(wid=0, core=7)
+bess.add_worker(wid=1, core=8)
+bess.add_worker(wid=2, core=9)
+
+port0 = PMDPort(port_id=0, num_inc_q=1, num_out_q=1)
+from_sanc = QueueInc(name='from_sanctuary', port=port0, qid=0)
+
+port1 = PMDPort(port_id=1,  num_out_q=1)
+to_sanc = QueueOut( port=port1, qid=0)
+
+
+
+from_sanc ->  to_sanc
+
+#q1::Queue() -> t::Timestamp(offset=42) -> m::Measure(offset=42) 
+
+
+bess.attach_task('from_sanctuary',wid=0)
+#q1.attach_task(wid=2)
+
+
+"""
+bess.resume_all()
+
+start_time = time.time()
+last_time = start_time
+print('{} RTT (us)                             '.format(' ' * 41), end='')
+print('   jitter (us)')
+print('{}    avg    min    50%    99%      max '.format(' ' * 41), end='')
+print('      avg    min    50%    99%      max')
+
+while True:
+    time.sleep(1)
+
+    # get_summary() doesn't require workers to be stopped
+    ret = m.get_summary(clear=True,  # reset stats every interval
+                        latency_percentiles=[50, 99],
+                        jitter_percentiles=[50, 99])
+
+    diff_ts = ret.timestamp - last_time
+    diff_pkts = ret.packets / diff_ts
+    diff_bits = ret.bits / diff_ts
+    last_time = ret.timestamp
+
+    print('%12.6f: %5.3f Mpps, %8.3f Mbps, ' \
+          '%7.3f %6.1f %6.1f %6.1f %8.1f'   %
+          (ret.timestamp - start_time,
+           diff_pkts / 1e6,
+           diff_bits / 1e6,
+           ret.latency.avg_ns,
+           ret.latency.min_ns,
+           ret.latency.percentile_values_ns[0],
+           ret.latency.percentile_values_ns[1],
+           ret.latency.max_ns))
+"""
