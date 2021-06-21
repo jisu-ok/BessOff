@@ -1,0 +1,96 @@
+import time
+# import subprocess
+# import shlex
+
+
+bess.add_worker(wid=0, core=1) #input port PMD
+bess.add_worker(wid=2, core=2)
+bess.add_worker(wid=3, core=3)
+bess.add_worker(wid=4, core=4)
+bess.add_worker(wid=5, core=5)
+
+NUM_VMS = 1
+port_in = 0
+port_out = 1
+
+PMD_CORE_LIST=[2,2,2,3,3,3,4,4,4,5,5,5]
+
+## NF chain of interest
+port_source = PMDPort(port_id=port_in, num_inc_q=1)
+input_source = QueueInc(port=port_source, qid=0)
+input_source.attach_task(wid=0)
+t =Timestamp(offset=42)
+input_source -> t
+prev = t
+
+for i in range(NUM_VMS):
+    PMDPort(
+        name='port_VM{}_0'.format(i),
+        vdev='eth_vhost_v{}_0,iface=/tmp/bessd/vhost_user{}_0.sock,queues=1'.format(i, i),
+        # num_inc_q=1,
+        num_out_q=1,
+        # size_inc_q=1024,
+        size_out_q=1024
+    )
+    prev -> QueueOut(name='output_VM{}'.format(i), port='port_VM{}_0'.format(i), qid=0)
+    
+    PMDPort(
+        name='port_VM{}_1'.format(i),
+        vdev='eth_vhost_v{}_1,iface=/tmp/bessd/vhost_user{}_1.sock,queues=1'.format(i, i),
+        num_inc_q=1,
+        # num_out_q=1,
+        size_inc_q=1024,
+        # size_out_q=1024
+    )
+    prev = QueueInc(name='input_VM{}'.format(i), port='port_VM{}_1'.format(i), qid=0)
+    bess.attach_task('input_VM{}'.format(i), wid=PMD_CORE_LIST[i])
+
+m = Measure(offset=42)
+port_sink = PMDPort(port_id=port_out, num_out_q=1)
+output_sink = QueueOut(port=port_sink, qid=0)
+
+prev -> m -> output_sink
+
+
+## Competing NF chain
+
+
+
+
+
+
+bess.resume_all()
+
+print('{} RTT (ns)                             '.format(' ' * 41), end='')
+print('   jitter (ns)')
+print('{}    avg    min    50%    99%      max '.format(' ' * 41), end='')
+print('      avg    min    50%    99%      max')
+
+time.sleep(5)
+
+ret = m.get_summary(clear=True)
+
+start_time = ret.timestamp
+
+print('Measure clear')
+time.sleep(10)
+
+    # get_summary() doesn't require workers to be stopped
+ret = m.get_summary(  # reset stats every interval
+                        latency_percentiles=[50, 99],
+                        jitter_percentiles=[50, 99])
+
+diff_ts = ret.timestamp - start_time
+diff_pkts = ret.packets / diff_ts
+diff_bits = ret.bits / diff_ts
+
+print('%12.6f: %5.3f Mpps, %8.3f Mbps, ' \
+          '%7.3f %6.1f %6.1f %6.1f %8.1f'   %
+          (ret.timestamp - start_time,
+           diff_pkts / 1e6,
+           diff_bits / 1e6,
+           ret.latency.avg_ns,
+           ret.latency.min_ns,
+           ret.latency.percentile_values_ns[0],
+           ret.latency.percentile_values_ns[1],
+           ret.latency.max_ns))

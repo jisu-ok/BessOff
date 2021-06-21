@@ -1,0 +1,137 @@
+import time
+# import subprocess
+# import shlex
+
+
+bess.add_worker(wid=0, core=1) #input port PMD
+bess.add_worker(wid=2, core=2)
+#bess.add_worker(wid=3, core=3)
+#bess.add_worker(wid=4, core=4)
+#bess.add_worker(wid=5, core=5)
+
+
+UNIT = 3
+NUM_VMS = 3
+OFFLOAD_LEVEL = 2  #2/3 of NUM_VMS will be offloaded.
+INITIALIZE_TIME = ((NUM_VMS//3)*(3-OFFLOAD_LEVEL)*0.5+4)
+
+
+port_in = 0
+port_out = 1
+
+PMD_CORE_LIST=[2,2,2,3,3,3,4,4,4,5,5,5]
+
+##3
+CONTAINER_CORE_LIST=[10,34,11]
+
+##6
+#CONTAINER_CORE_LIST=[9,33,10,34,11,35]
+
+##9
+#CONTAINER_CORE_LIST=[7,31,8,32,9,33,10,34,11]
+
+##12
+#CONTAINER_CORE_LIST=[6,30,7,31,8,32,9,33,10,34,11,35]
+
+for i in range((NUM_VMS//UNIT) * OFFLOAD_LEVEL):
+    bess.add_worker(wid=CONTAINER_CORE_LIST[i], core=CONTAINER_CORE_LIST[i])
+
+## NF chain of interest
+port_source = PMDPort(port_id=port_in, num_inc_q=1)
+input_source = QueueInc(port=port_source, qid=0)
+input_source.attach_task(wid=0)
+t =Timestamp(offset=42)
+m = Measure(offset=42)
+input_source ->t
+prev = t
+
+fw=list()
+for i in range(OFFLOAD_LEVEL * (NUM_VMS//UNIT)):
+    fw.append(ACL(rules=[\
+        {'src_port':8, 'dst_port':0, 'drop':True},
+        {'src_port':1, 'dst_port':0, 'drop':True},
+        {'src_port':2, 'dst_port':0, 'drop':True},
+        {'src_port':3, 'dst_port':0, 'drop':True},
+        {'src_port':4, 'dst_port':0, 'drop':True},
+        {'src_port':150, 'dst_port':0, 'drop':True},
+        {'src_port':151, 'dst_port':0, 'drop':True},
+        {'src_port':152, 'dst_port':0, 'drop':True},
+        {'src_port':153, 'dst_port':0, 'drop':True},
+        {'src_port':100, 'drop':False}]))
+        
+
+PMD_id = 0
+wid_ = 0
+for cycle in range(NUM_VMS//UNIT):
+    
+    for o in range(OFFLOAD_LEVEL):
+        q1 = Queue(size=1024, prefetch=True, backpressure = False)
+        q2 = Queue(size=1024, prefetch=True, backpressure = False)
+        q1.attach_task(wid=CONTAINER_CORE_LIST[cycle*OFFLOAD_LEVEL+o])
+        q2.attach_task(wid=PMD_CORE_LIST[wid_])
+        prev->q1->fw[cycle*OFFLOAD_LEVEL+o]->q2
+        prev = q2
+	wid_+=1
+
+    for i in range(UNIT-OFFLOAD_LEVEL):
+        PMDPort(name='port_VM{}_0'.format(PMD_id),vdev='eth_vhost_v{}_0,iface=/tmp/bessd/vhost_user{}_0.sock,queues=1'.format(PMD_id, PMD_id),num_out_q=1,size_out_q=1024)
+        prev -> QueueOut(name='output_VM{}'.format(PMD_id), port='port_VM{}_0'.format(PMD_id), qid=0)
+    
+        PMDPort(name='port_VM{}_1'.format(PMD_id),vdev='eth_vhost_v{}_1,iface=/tmp/bessd/vhost_user{}_1.sock,queues=1'.format(PMD_id, PMD_id),num_inc_q=1,size_inc_q=1024)
+        prev = QueueInc(name='input_VM{}'.format(PMD_id), port='port_VM{}_1'.format(PMD_id), qid=0)
+        bess.attach_task('input_VM{}'.format(PMD_id), wid=PMD_CORE_LIST[wid_])
+        PMD_id+=1
+        wid_ += 1
+    
+
+port_sink = PMDPort(port_id=port_out, num_out_q=1)
+output_sink = QueueOut(port=port_sink, qid=0)
+
+prev ->m->output_sink
+
+
+## Competing NF chain
+
+
+
+
+
+
+bess.resume_all()
+
+print('{} RTT (ns)                             '.format(' ' * 41), end='')
+print('   jitter (ns)')
+print('{}    avg    min    50%    99%      max '.format(' ' * 41), end='')
+print('      avg    min    50%    99%      max')
+
+time.sleep(INITIALIZE_TIME)
+
+ret = m.get_summary(clear=True)
+
+start_time = ret.timestamp
+
+print('Measure clear')
+time.sleep(15)
+
+
+while True:
+    # get_summary() doesn't require workers to be stopped
+    ret = m.get_summary(clear=True,  # reset stats every interval
+                        latency_percentiles=[50, 99],
+                        jitter_percentiles=[50, 99])
+
+    diff_ts = ret.timestamp - start_time
+    diff_pkts = ret.packets / diff_ts
+    diff_bits = ret.bits / diff_ts
+
+    print('%12.6f: %5.3f Mpps, %8.3f Mbps, ' \
+          '%7.3f %6.1f %6.1f %6.1f %8.1f'   %
+          (ret.timestamp - start_time,
+           diff_pkts / 1e6,
+           diff_bits / 1e6,
+           ret.latency.avg_ns,
+           ret.latency.min_ns,
+           ret.latency.percentile_values_ns[0],
+           ret.latency.percentile_values_ns[1],
+           ret.latency.max_ns))
+    break
