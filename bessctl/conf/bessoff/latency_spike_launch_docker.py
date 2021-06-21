@@ -5,11 +5,12 @@ import shlex
 import time
 
 NUM_VMS = 3
-NUM_VMS_CMPT = 3
-VERBOSE = 0
+NUM_VMS_CMPT = 2
+VERBOSE = 1
 
+CORE_LIST=[7,8,9,10,11,12,19,20,21,22,23,24]
 CONTAINER_NAME='dpdk-test'
-IMAGE='ubuntu:dpdk-numa'
+IMAGE='ubuntu:dpdk-firewall'
 
 def launch(cid, corenum):
     cmd = "numactl -m 0 " \
@@ -25,7 +26,7 @@ def launch(cid, corenum):
                 cid,
                 cid
             )
-
+    print(cmd)
     if VERBOSE:
         out = None  # to screen
     else:
@@ -58,8 +59,8 @@ if __name__ == '__main__':
     num_containers = NUM_VMS + NUM_VMS_CMPT
 
     try:
-        procs = [launch(i, 2+i) for i in range(NUM_VMS)]
-        procs = [launch(NUM_VMS+i, 26+i) for i in range(NUM_VMS_CMPT)]
+        procs = [launch(i, 9+i) for i in range(NUM_VMS)]
+        procs = [launch(NUM_VMS+i, 28+i) for i in range(NUM_VMS_CMPT)]
 
         print('Press Ctrl+C to terminate all containers')
         while True:

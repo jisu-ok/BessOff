@@ -1,0 +1,162 @@
+import time
+# import subprocess
+# import shlex
+
+
+bess.add_worker(wid=0, core=11)
+bess.add_worker(wid=1, core=35)
+
+
+## NF chain of interest
+port_source = PMDPort(port_id=0, num_inc_q=1)
+input_source = QueueInc(port=port_source, qid=0)
+input_source.attach_task(wid=0)
+t =Timestamp(offset=42)
+input_source -> t
+prev = t
+
+NUM_VMS = 1
+for i in range(NUM_VMS):
+    PMDPort(
+        name='port_VM{}_0'.format(i),
+        vdev='eth_vhost_v{}_0,iface=/tmp/bessd/vhost_user{}_0.sock,queues=1'.format(i, i),
+        # num_inc_q=1,
+        num_out_q=1,
+        # size_inc_q=1024,
+        size_out_q=1024
+    )
+    prev -> QueueOut(name='output_VM{}'.format(i), port='port_VM{}_0'.format(i), qid=0)
+    
+    PMDPort(
+        name='port_VM{}_1'.format(i),
+        vdev='eth_vhost_v{}_1,iface=/tmp/bessd/vhost_user{}_1.sock,queues=1'.format(i, i),
+        num_inc_q=1,
+        # num_out_q=1,
+        size_inc_q=1024,
+        # size_out_q=1024
+    )
+    prev = QueueInc(name='input_VM{}'.format(i), port='port_VM{}_1'.format(i), qid=0)
+    bess.attach_task('input_VM{}'.format(i), wid=0)
+
+m = Measure(offset=42)
+port_sink = PMDPort(port_id=2, num_out_q=1)
+output_sink = QueueOut(port=port_sink, qid=0)
+
+prev -> m -> output_sink
+
+
+## Competing NF chain
+port_source_cmpt = PMDPort(port_id=1, num_inc_q=1)
+input_source_cmpt = QueueInc(port=port_source_cmpt, qid=0)
+input_source_cmpt.attach_task(wid=1)
+
+prev = input_source_cmpt
+NUM_VMS_CMPT = 1
+for i in range(NUM_VMS, NUM_VMS + NUM_VMS_CMPT):
+    PMDPort(
+        name='port_VM{}_0'.format(i),
+        vdev='eth_vhost_v{}_0,iface=/tmp/bessd/vhost_user{}_0.sock,queues=1'.format(i, i),
+        # num_inc_q=1,
+        num_out_q=1,
+        # size_inc_q=1024,
+        size_out_q=1024
+    )
+    prev -> QueueOut(name='output_VM{}'.format(i), port='port_VM{}_0'.format(i), qid=0)
+    
+    PMDPort(
+        name='port_VM{}_1'.format(i),
+        vdev='eth_vhost_v{}_1,iface=/tmp/bessd/vhost_user{}_1.sock,queues=1'.format(i, i),
+        num_inc_q=1,
+        # num_out_q=1,
+        size_inc_q=1024,
+        # size_out_q=1024
+    )
+    prev = QueueInc(name='input_VM{}'.format(i), port='port_VM{}_1'.format(i), qid=0)
+    bess.attach_task('input_VM{}'.format(i), wid=1)
+
+port_sink_cmpt = PMDPort(port_id=3, num_out_q=1)
+output_sink_cmpt = QueueOut(port=port_sink_cmpt, qid=0)
+
+prev -> output_sink_cmpt
+
+
+
+
+
+
+# CONTAINER_NAME='dpdk-test0'
+# IMAGE='ubuntu:dpdk-numa'
+# for i in range(NUM_VMS + NUM_VMS_CMPT):
+#     cmd = "numactl -m 0 " \
+#             "docker run --privileged -it --rm --name {} -v /dev/hugepages:/dev/hugepages " \
+#             "-v /tmp/bessd:/tmp/bessd {} " \
+#             "/root/dpdk/build/app/dpdk-testpmd --in-memory --no-pci -m 1024 -l {} " \
+#             "--vdev=virtio_user0,path=/tmp/bessd/vhost_user{}_0.sock,queues=1 " \
+#             "--vdev=virtio_user1,path=/tmp/bessd/vhost_user{}_1.sock,queues=1 " \
+#             "-- -i --txd=1024 --rxd=1024 --txq=1 --rxq=1  --total-num-mbufs=65536".format(
+#                 CONTAINER_NAME,
+#                 IMAGE,
+#                 2 + i,
+#                 i,
+#                 i
+#             )
+
+#     out = subprocess.PIPE
+#     proc = subprocess.Popen(shlex.split(cmd), stdin=subprocess.PIPE,
+#                             stdout=out, stderr=subprocess.STDOUT,
+#                             universal_newlines=True)
+#     # print('set fwd {}'.format(FWD_MODE), file=proc.stdin)
+#     # print('set txpkts {}'.format(PKT_SIZE), file=proc.stdin)
+#     print('start', file=proc.stdin, flush=True)
+
+
+# fw0_1 = ACL(rules=[{'src_ip': '192.168.0.0/16', 'drop': False}])
+# fw0_2= ACL(rules=[{'src_ip': '192.168.0.0/16', 'drop': False}])
+# fw0_3 = ACL(rules=[{'src_ip': '192.168.0.0/16', 'drop': False}])
+
+# input0 -> Timestamp(offset=42) -> fw0_1 -> fw0_2 -> fw0_3 -> m::Measure(offset=42) -> Sink()
+
+# ## NF chain of interest
+# port1 = PMDPort(port_id=1, num_inc_q=1)
+# input1 = QueueInc(port=port1, qid=0)
+
+# fw1_1 = ACL(rules=[{'src_ip': '192.168.0.0/16', 'drop': False}])
+# fw1_2= ACL(rules=[{'src_ip': '192.168.0.0/16', 'drop': False}])
+# fw1_3 = ACL(rules=[{'src_ip': '192.168.0.0/16', 'drop': False}])
+
+# input1 -> fw1_1 -> fw1_2 -> fw1_3 -> Sink()
+
+
+
+bess.resume_all()
+
+start_time = time.time()
+last_time = start_time
+print('{} RTT (us)                             '.format(' ' * 41), end='')
+print('   jitter (us)')
+print('{}    avg    min    50%    99%      max '.format(' ' * 41), end='')
+print('      avg    min    50%    99%      max')
+
+while True:
+    time.sleep(1)
+
+    # get_summary() doesn't require workers to be stopped
+    ret = m.get_summary(clear=True,  # reset stats every interval
+                        latency_percentiles=[50, 99],
+                        jitter_percentiles=[50, 99])
+
+    diff_ts = ret.timestamp - last_time
+    diff_pkts = ret.packets / diff_ts
+    diff_bits = ret.bits / diff_ts
+    last_time = ret.timestamp
+
+    print('%12.6f: %5.3f Mpps, %8.3f Mbps, ' \
+          '%7.3f %6.1f %6.1f %6.1f %8.1f'   %
+          (ret.timestamp - start_time,
+           diff_pkts / 1e6,
+           diff_bits / 1e6,
+           ret.latency.avg_ns,
+           ret.latency.min_ns,
+           ret.latency.percentile_values_ns[0],
+           ret.latency.percentile_values_ns[1],
+           ret.latency.max_ns))

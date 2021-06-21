@@ -1,0 +1,191 @@
+import time
+import scapy.all as scapy
+from pybess import dynamic_onoff
+# import subprocess
+# import shlex
+
+
+bess.add_worker(wid=0, core=2)
+bess.add_worker(wid=1, core=3)
+bess.add_worker(wid=2, core=4)
+
+bess.add_worker(wid=3, core=5)
+bess.add_worker(wid=4, core=6)
+bess.add_worker(wid=5, core=26)
+bess.add_worker(wid=6, core=27)
+#bess.add_worker(wid=3, core=5)
+
+CORE_VMS=[2,3,4]
+CORE_VMS_CMPT=[2,5,6]
+
+## Competing NF chain
+## NF chain of interest
+port_source = PMDPort(port_id=0, num_inc_q=1)
+input_source = QueueInc(port=port_source, qid=0)
+input_source.attach_task(wid=0)
+t =Timestamp(offset=42)
+input_source -> t
+prev = t
+
+
+NUM_VMS = 3
+NUM_VMS_CMPT = 2
+
+pm = PointMachine()
+cf = Confluence()
+prev->pm
+
+PMDPort(name='port_VM{}_0'.format(0),vdev='eth_vhost_v{}_0,iface=/tmp/bessd/vhost_user{}_0.sock,queues=1'.format(0, 0), num_out_q=1,size_out_q=1024 )
+pm:0 -> QueueOut(name='output_VM{}'.format(0), port='port_VM{}_0'.format(0), qid=0)
+    
+PMDPort(name='port_VM{}_1'.format(0), vdev='eth_vhost_v{}_1,iface=/tmp/bessd/vhost_user{}_1.sock,queues=1'.format(0, 0),num_inc_q=1, size_inc_q=1024)
+prev = QueueInc(name='input_VM{}'.format(0), port='port_VM{}_1'.format(0), qid=0)
+bess.attach_task('input_VM{}'.format(0), wid=CORE_VMS[0])
+
+prev->0:cf
+
+fw = ACL(rules=[\
+        {'src_port':8, 'dst_port':0, 'drop':True},
+        {'src_port':1, 'dst_port':0, 'drop':True},
+        {'src_port':2, 'dst_port':0, 'drop':True},
+        {'src_port':3, 'dst_port':0, 'drop':True},
+        {'src_port':4, 'dst_port':0, 'drop':True},
+        {'src_port':150, 'dst_port':0, 'drop':True},
+        {'src_port':151, 'dst_port':0, 'drop':True},
+        {'src_port':152, 'dst_port':0, 'drop':True},
+        {'src_port':153, 'dst_port':0, 'drop':True},
+        {'src_port':100, 'drop':False}])
+q1=Queue(size=64)
+q1.attach_task(wid=CORE_VMS[0])
+pm:1 -> q1->fw -> 1:cf
+
+
+
+
+prev = cf
+for i in range(1,NUM_VMS):
+    PMDPort(
+        name='port_VM{}_0'.format(i),
+        vdev='eth_vhost_v{}_0,iface=/tmp/bessd/vhost_user{}_0.sock,queues=1'.format(i, i),
+        # num_inc_q=1,
+        num_out_q=1,
+        # size_inc_q=1024,
+        size_out_q=1024
+    )
+    prev -> QueueOut(name='output_VM{}'.format(i), port='port_VM{}_0'.format(i), qid=0)
+    
+    PMDPort(
+        name='port_VM{}_1'.format(i),
+        vdev='eth_vhost_v{}_1,iface=/tmp/bessd/vhost_user{}_1.sock,queues=1'.format(i, i),
+        num_inc_q=1,
+        # num_out_q=1,
+        size_inc_q=1024,
+        # size_out_q=1024
+    )
+    prev = QueueInc(name='input_VM{}'.format(i), port='port_VM{}_1'.format(i), qid=0)
+    bess.attach_task('input_VM{}'.format(i), wid=CORE_VMS[i])
+"""    
+q2 = Queue()
+prev-> q2
+prev = q2
+"""
+m = Measure(offset=42)
+port_sink = PMDPort(port_id=1, num_out_q=1)
+output_sink = QueueOut(port=port_sink, qid=0)
+prev->m->output_sink
+
+
+port_source_cmpt = PMDPort(port_id=2, num_inc_q=1)
+input_source_cmpt = QueueInc(port=port_source_cmpt, qid=0)
+input_source_cmpt.attach_task(wid=1)
+prev = input_source_cmpt
+
+
+for i in range(NUM_VMS, NUM_VMS + NUM_VMS_CMPT):
+    PMDPort(
+        name='port_VM{}_0'.format(i),
+        vdev='eth_vhost_v{}_0,iface=/tmp/bessd/vhost_user{}_0.sock,queues=1'.format(i, i),
+        # num_inc_q=1,
+        num_out_q=1,
+        # size_inc_q=1024,
+        size_out_q=1024
+    )
+    prev -> QueueOut(name='output_VM{}'.format(i), port='port_VM{}_0'.format(i), qid=0)
+    
+    PMDPort(
+        name='port_VM{}_1'.format(i),
+        vdev='eth_vhost_v{}_1,iface=/tmp/bessd/vhost_user{}_1.sock,queues=1'.format(i, i),
+        num_inc_q=1,
+        # num_out_q=1,
+        size_inc_q=1024,
+        # size_out_q=1024
+    )
+    prev = QueueInc(name='input_VM{}'.format(i), port='port_VM{}_1'.format(i), qid=0)
+    bess.attach_task('input_VM{}'.format(i), wid=CORE_VMS_CMPT[i-NUM_VMS])
+
+port_sink_cmpt = PMDPort(port_id=3, num_out_q=1)
+output_sink_cmpt = QueueOut(port=port_sink_cmpt, qid=0)
+
+
+static_nat::StaticNAT(pairs=[
+    {'int_range': {'start': '172.16.0.0', 'end': '172.31.255.255'},
+     'ext_range': {'start': '55.1.0.0', 'end': '55.16.255.255'}},
+    {'int_range': {'start': '192.168.0.0', 'end': '192.168.255.255'},
+     'ext_range': {'start': '66.77.0.0', 'end': '66.77.255.255'}},
+])
+
+q11 = Queue()
+q12 = Queue()
+
+q11.attach_task(wid=5)
+q12.attach_task(wid=6)
+prev-> q11-> 0:static_nat:1 ->  MACSwap() ->  IPSwap() -> 1:static_nat:0 ->q12 -> output_sink_cmpt
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+bess.resume_all()
+
+#dynamic_onoff.agent(m, [pm], spike_percent = 20, fall_percent = 35)
+
+
+start_time = time.time()
+last_time = start_time
+print('{} RTT (us)                             '.format(' ' * 41), end='')
+print('   jitter (us)')
+print('{}    avg    min    50%    99%      max '.format(' ' * 41), end='')
+print('      avg    min    50%    99%      max')
+
+while True:
+    time.sleep(1)
+
+    # get_summary() doesn't require workers to be stopped
+    ret = m.get_summary(clear=True,  # reset stats every interval
+                        latency_percentiles=[50, 99],
+                        jitter_percentiles=[50, 99])
+
+    diff_ts = ret.timestamp - last_time
+    diff_pkts = ret.packets / diff_ts
+    diff_bits = ret.bits / diff_ts
+    last_time = ret.timestamp
+
+    print('%12.6f: %5.3f Mpps, %8.3f Mbps, ' \
+          '%7.3f %6.1f %6.1f %6.1f %8.1f'   %
+          (ret.timestamp - start_time,
+           diff_pkts / 1e6,
+           diff_bits / 1e6,
+           ret.latency.avg_ns,
+           ret.latency.min_ns,
+           ret.latency.percentile_values_ns[0],
+           ret.latency.percentile_values_ns[1],
+           ret.latency.max_ns))
