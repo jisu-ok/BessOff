@@ -1,3 +1,4 @@
+from __future__ import print_function
 import time
 
 alpha = 0.125
@@ -16,21 +17,25 @@ def agent(measurer, off_points, rep_type='median', spike_percent=20, fall_percen
         clock += 1
         print("[clock={}] ".format(clock), end='')
 
-        ret = measurer.get_summary(clear=True, latency_percentile=[50,99])
+        ret = measurer.get_summary(clear=True, latency_percentiles=[50, 99], jitter_percentiles=[50,99])
         if rep_type == 'avg':
             val = ret.latency.avg_ns
         elif rep_type == 'median':
             val = ret.latency.percentile_values_ns[0]
         elif rep_type == '99th':
             val = ret.latency.percentile_values_ns[1]
+            
         print("Measured latency value ({}): {} (ns)".format(rep_type, val))
+
+        if val == 0:
+            continue
 
         if offloaded: # offlaoded mode
             offload_timer += 1
             if est_latency_unusual - val > est_latency_unusual * fall_percent / 100 and offload_timer >= offload_min_time:
                 # onload again
                 for p in off_points:
-                    p.set_ogate(0)
+                    p.set_ogate(ogate=0)
                     print("Onloaded a PointMachine!")
                     print(p)
                 offloaded = False
@@ -46,7 +51,7 @@ def agent(measurer, off_points, rep_type='median', spike_percent=20, fall_percen
             if val - est_latency_usual > est_latency_usual * spike_percent / 100:
                 # latency spike -> offload
                 for p in off_points:
-                    p.set_ogate(1)
+                    p.set_ogate(ogate=1)
                     print("Offloaded a PointMachine!")
                     print(p)
                 offloaded = True
