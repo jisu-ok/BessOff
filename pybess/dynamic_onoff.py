@@ -1,7 +1,7 @@
 from __future__ import print_function
 import time
 
-alpha = 0.125
+alpha = 0.06725
 offload_min_time = 5
 
 def agent(measurer, off_points, rep_type='median', spike_percent=20, fall_percent=30):
@@ -27,11 +27,13 @@ def agent(measurer, off_points, rep_type='median', spike_percent=20, fall_percen
             
         print("Measured latency value ({}): {} (ns)".format(rep_type, val))
 
-        if val == 0:
+        if clock <15:
             continue
 
         if offloaded: # offlaoded mode
             offload_timer += 1
+#            if est_latency_unusual != None:
+#                print( "fall{} threshold{}".format(est_latency_unusual-val, est_latency_unusual*fall_percent))
             if est_latency_unusual - val > est_latency_unusual * fall_percent / 100 and offload_timer >= offload_min_time:
                 # onload again
                 for p in off_points:
@@ -47,12 +49,13 @@ def agent(measurer, off_points, rep_type='median', spike_percent=20, fall_percen
             if est_latency_usual == None:
                 est_latency_usual = val
                 continue
-            
+#            if est_latency_unusual != None: 
+#                print( "fall{} threshold{}".format(est_latency_unusual-val, est_latency_unusual*spike_percent/100))
             if val - est_latency_usual > est_latency_usual * spike_percent / 100:
                 # latency spike -> offload
                 for p in off_points:
                     p.set_ogate(ogate=1)
-                    print("Offloaded a PointMachine!")
+                    print("Offloaded a PointMachine!" )
                     print(p)
                 offloaded = True
                 offload_timer = 0
@@ -60,7 +63,6 @@ def agent(measurer, off_points, rep_type='median', spike_percent=20, fall_percen
             else:
                 est_latency_usual = (1 - alpha) * est_latency_usual + alpha * val
 
-        print()
 
     return
 
